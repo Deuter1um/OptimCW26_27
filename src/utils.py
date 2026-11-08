@@ -53,18 +53,7 @@ def L(eps, t):
 
 
 def dL(eps, t):
-    return np.select(
-        [
-            t < -eps,
-            np.abs(t) <= eps,
-            t > eps
-        ],
-        [
-            -eps,
-            t,
-            eps
-        ]
-    )
+    return np.clip(t, -eps, eps)
 
 
 def F(eps, theta: np.ndarray, A: np.ndarray, b: np.ndarray):
