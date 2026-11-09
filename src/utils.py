@@ -94,3 +94,12 @@ def F_gd(A: np.ndarray, b: np.ndarray, n=8, eps=1e-3, threshold=1e-9, max_iter=1
 def get_mse(theta: np.ndarray, X_val: np.ndarray, Y_val: np.ndarray):
     V_val_estimate = np.array([V_estimate(theta, x) for x in X_val])
     return np.mean((V_val_estimate - Y_val) ** 2)
+
+def hessian(p, anchors, r):
+    H = np.zeros((2, 2))
+    for s, ri in zip(anchors, r):
+        d = p - s
+        d = d.reshape(-1, 1)
+        H += 2 * d @ d.T
+        H += (d.T @ d - ri**2) * np.eye(2)
+    return H
