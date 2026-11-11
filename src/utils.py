@@ -65,7 +65,7 @@ def F_grad(eps, theta: np.ndarray, A: np.ndarray, b: np.ndarray):
     return A.T @ dL(eps, A @ theta - b)
 
 
-def F_gd(A: np.ndarray, b: np.ndarray, n=8, eps=1e-3, threshold=1e-9, max_iter=1e6, rand_seed=42):
+def F_gd(A: np.ndarray, b: np.ndarray, n=8, eps=1e-3, threshold=1e-9, max_iter=1e6, rand_seed=42, return_loss_history=False):
     evalues = np.linalg.eigvals(A.T @ A)
     sigma_max_sqr = evalues.max()
 
@@ -73,6 +73,7 @@ def F_gd(A: np.ndarray, b: np.ndarray, n=8, eps=1e-3, threshold=1e-9, max_iter=1
     eps = eps
     rng = np.random.default_rng(seed=rand_seed)
     theta_iter = rng.normal(size=n)
+    loss_history = []
 
     threshold = threshold
     max_iter = max_iter
@@ -84,16 +85,23 @@ def F_gd(A: np.ndarray, b: np.ndarray, n=8, eps=1e-3, threshold=1e-9, max_iter=1
         last_loss = loss.copy()
         theta_iter -= t * F_grad(eps, theta_iter, A, b)
         loss = F(eps, theta_iter, A, b)
+        loss_history.append(loss)
         iter_cnt += 1
         # clear_output()
         # print(f"iteration:{iter_cnt} | loss = {loss}")
 
-    return iter_cnt, theta_iter, loss
+    loss_history = np.array(loss_history)
+
+    if return_loss_history:
+        return iter_cnt, theta_iter, loss, loss_history
+    else:
+        return iter_cnt, theta_iter, loss
 
 
 def get_mse(theta: np.ndarray, X_val: np.ndarray, Y_val: np.ndarray):
     V_val_estimate = np.array([V_estimate(theta, x) for x in X_val])
     return np.mean((V_val_estimate - Y_val) ** 2)
+
 
 def hessian(p, anchors, r):
     H = np.zeros((2, 2))
