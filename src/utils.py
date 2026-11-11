@@ -65,24 +65,22 @@ def F_grad(eps, theta: np.ndarray, A: np.ndarray, b: np.ndarray):
     return A.T @ dL(eps, A @ theta - b)
 
 
-def F_gd(A: np.ndarray, b: np.ndarray, n=8, eps=1e-3, threshold=1e-9, max_iter=1e6, rand_seed=42, return_loss_history=False):
+def F_gd(A: np.ndarray, b: np.ndarray, theta_init=None, n=8, eps=1e-3, threshold=1e-6, max_iter=1e6, rand_seed=42, return_loss_history=False):
     evalues = np.linalg.eigvals(A.T @ A)
     sigma_max_sqr = evalues.max()
 
     t = 1 / sigma_max_sqr
-    eps = eps
-    rng = np.random.default_rng(seed=rand_seed)
-    theta_iter = rng.normal(size=n)
+    if theta_init is None:
+        rng = np.random.default_rng(seed=rand_seed)
+        theta_iter = rng.normal(size=n)
+    else:
+        theta_iter = theta_init.copy()
     loss_history = []
 
-    threshold = threshold
-    max_iter = max_iter
     loss = F(eps, theta_iter, A, b)
-    last_loss = float("inf")
     iter_cnt = 0
 
-    while np.abs(loss - last_loss) >= threshold and iter_cnt < max_iter:
-        last_loss = loss.copy()
+    while np.linalg.norm(F_grad(eps, theta_iter, A, b)) >= threshold and iter_cnt < max_iter:
         theta_iter -= t * F_grad(eps, theta_iter, A, b)
         loss = F(eps, theta_iter, A, b)
         loss_history.append(loss)
@@ -111,3 +109,26 @@ def hessian(p, anchors, r):
         H += 2 * d @ d.T
         H += (d.T @ d - ri**2) * np.eye(2)
     return H
+
+
+def g(t, p: np.ndarray, anchors: np.ndarray, ranges: np.ndarray):
+    return 0.25 * np.sum((np.linalg.norm(p - anchors, axis=1) ** 2 - ranges[t] ** 2) ** 2)
+
+
+def g_grad(t, p: np.ndarray, anchors: np.ndarray, ranges: np.ndarray):
+    r = np.linalg.norm(p - anchors, axis=1) ** 2 - ranges[t] ** 2
+    return np.sum(r[:, None] * (p - anchors), axis=0)
+
+
+def g_gd(t, p_init: np.ndarray, anchors: np.ndarray, ranges: np.ndarray, threshold=1e-6, max_iter=1e6):
+    step = 1e-3
+    p_iter = p_init.copy()
+    loss = g(t, p_iter, anchors, ranges)
+    iter_cnt = 0
+
+    while np.linalg.norm(g_grad(t, p_iter, anchors, ranges)) >= threshold and iter_cnt < max_iter:
+        p_iter -= step * g_grad(t, p_iter, anchors, ranges)
+        loss = g(t, p_iter, anchors, ranges)
+        iter_cnt += 1
+
+    return iter_cnt, p_iter, loss
