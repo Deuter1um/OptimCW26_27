@@ -132,3 +132,8 @@ def g_gd(t, p_init: np.ndarray, anchors: np.ndarray, ranges: np.ndarray, thresho
         iter_cnt += 1
 
     return iter_cnt, p_iter, loss
+
+
+def valid(traj: np.ndarray, checkpoints: np.ndarray):
+    mask = np.arange(9, 60, 10)
+    return np.sqrt(1.0 / 6 * np.sum((checkpoints - traj[mask]) ** 2))
