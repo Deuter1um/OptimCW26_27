@@ -137,3 +137,36 @@ def g_gd(t, p_init: np.ndarray, anchors: np.ndarray, ranges: np.ndarray, thresho
 def valid(traj: np.ndarray, checkpoints: np.ndarray):
     mask = np.arange(9, 60, 10)
     return np.sqrt(1.0 / 6 * np.sum((checkpoints - traj[mask]) ** 2))
+
+
+def D_matrix(T) -> np.ndarray:
+    D = np.zeros(((T-1), T))
+    D[np.arange(T-1), np.arange(T-1)] = 1
+    D[np.arange(T-1), np.arange(1, T)] = -1
+    return D
+
+
+def G(lamb, P: np.ndarray, anchors: np.ndarray, ranges: np.ndarray):
+    T = P.shape[0]
+    D = D_matrix(T)
+    return np.sum(np.array([g(t, p, anchors, ranges) for t, p in enumerate(P)])) + lamb / 2 * np.linalg.norm(D @ P, ord="fro")
+
+
+def G_grad(lamb, P: np.ndarray, anchors: np.ndarray, ranges: np.ndarray):
+    T = P.shape[0]
+    D = D_matrix(T)
+    return np.array([g_grad(t, p, anchors, ranges) for t, p in enumerate(P)]) + lamb * D.T @ D @ P
+
+
+def G_gd(lamb, P_init: np.ndarray, anchors: np.ndarray, ranges: np.ndarray, threshold=1e-6, max_iter=1e6):
+    step = 1 / (1000 + 4 * lamb)
+    P_iter = P_init.copy()
+    loss = G(lamb, P_iter, anchors, ranges)
+    iter_cnt = 0
+
+    while np.linalg.norm(G_grad(lamb, P_iter, anchors, ranges), ord="fro") >= threshold and iter_cnt < max_iter:
+        P_iter -= step * G_grad(lamb, P_iter, anchors, ranges)
+        loss = G(lamb, P_iter, anchors, ranges)
+        iter_cnt += 1
+
+    return iter_cnt, P_iter, loss
